@@ -24,7 +24,7 @@ model User {
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
 }
 
-enum Role {
-  USER
-  ADMIN
+enum Role { // define o enum Role com os valores USER e ADMIN.
+  USER // define o enum Role com os valores USER e
+  ADMIN // define o enum Role com os valores USER e ADMIN.
 }
