@@ -22,6 +22,7 @@ model User {
   role Role @default(USER) // define o campo role como um enum com valor padrão USER.
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
+  @@map("users") // define o nome da tabela no banco de dados como "users".
 }
 
 enum Role { // define o enum Role com os valores USER e ADMIN.
@@ -35,6 +36,7 @@ model Theme {
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
   subject Subjects[] // define a relação entre Theme e Subjects, onde um Theme pode ter vários Subjects.
+  @@map("themes") // define o nome da tabela no banco de dados como "themes".
 }
 
 model Subjects {
@@ -44,5 +46,7 @@ model Subjects {
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
   theme Theme @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
+  @@unique([themeId, name]) // define uma restrição de unicidade para o par de campos themeId e name.
+  @@map("subjects") // define o nome da tabela no banco de dados como "subjects".
 }
 
