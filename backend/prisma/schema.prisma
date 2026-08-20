@@ -4,10 +4,27 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client" // define o gerador de código do Prisma Client.
+  output   = "../src/generated/prisma" // determina onde o código gerado será colocado.
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+// Primeiro Molde User
+
+model User {
+  id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
+  name String // define o campo name como uma string obrigatória.
+  email String @unique // define o campo email como uma string obrigatória e única.
+  password String // define o campo password como uma string obrigatória.
+  role Role @default(USER) // define o campo role como um enum com valor padrão USER.
+  createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
+  updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
+}
+
+enum Role {
+  USER
+  ADMIN
 }
