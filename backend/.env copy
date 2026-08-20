@@ -1,0 +1,2 @@
+PORT=1000
+DATABASE_URL="postgresql://postgres:minhaSenha@localhost:5432/meu_banco"
