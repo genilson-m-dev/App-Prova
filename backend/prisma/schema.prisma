@@ -34,15 +34,15 @@ model Theme {
   name String // define o campo name como uma string obrigatória.
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
-  subjects Subjects[] // define a relação entre Theme e Subjects, onde um Theme pode ter vários Subjects.
+  subject Subjects[] // define a relação entre Theme e Subjects, onde um Theme pode ter vários Subjects.
 }
 
-model Subject {
+model Subjects {
   id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
   name String // define o campo name como uma string obrigatória.
   themeId String // define o campo themeId como uma string obrigatória, que será usada para relacionar com Theme.
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
-  // theme Theme @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
+  theme Theme @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
 }
 
