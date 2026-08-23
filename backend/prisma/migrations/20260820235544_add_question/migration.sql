@@ -15,4 +15,9 @@ CREATE TABLE "questions" (
 );
 
 -- AddForeignKey
-ALTER TABLE "questions" ADD CONSTRAINT "questions_subjectId_fkey" FOREIGN KEY ("subjectId") REFERENCES "subjects"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "questions" 
+ADD CONSTRAINT "questions_subjectId_fkey" 
+FOREIGN KEY ("subjectId") 
+REFERENCES "subjects"("id") 
+ON DELETE RESTRICT 
+ON UPDATE CASCADE;
