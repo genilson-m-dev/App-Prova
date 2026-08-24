@@ -4,6 +4,8 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 
+import themeRouter from "./routes/theme.routes";
+
 const app = express(); // Cria uma instância do Express
 
 app.use(helmet()); // Adiciona o middleware Helmet para segurança
@@ -15,5 +17,7 @@ app.get("/health", (_req, res) => {
     message: "A aplicação está funcionando corretamente."
    }); // Rota de verificação de saúde da aplicação
 });
+
+app.use("/", themeRouter); // Adiciona o roteador de temas à aplicação
 
 export default app; // Exporta a instância do Express para ser usada em outros arquivos

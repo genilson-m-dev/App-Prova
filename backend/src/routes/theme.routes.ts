@@ -3,7 +3,7 @@ import { prismaDB } from '../lib/prisma';
 
 const themeRouter = Router();
 
-themeRouter.get("/", async (_req, res) => {
+themeRouter.get("/cachoeira", async (_req, res) => {
     try {
         const themes = await prismaDB.theme.findMany();
         return res.status(200).json(themes);
