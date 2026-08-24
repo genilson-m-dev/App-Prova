@@ -31,29 +31,29 @@ model Theme {
   name String // define o campo name como uma string obrigatória.
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
-  subject Subjects[] // define a relação entre Theme e Subjects, onde um Theme pode ter vários Subjects.
+  subjects Subject[] // define a relação entre Theme e Subjects, onde um Theme pode ter vários Subjects.
   @@map("themes") // define o nome da tabela no banco de dados como "themes".
 }
 
-model Subjects {
+model Subject {
   id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
   name String // define o campo name como uma string obrigatória.
   themeId String // define o campo themeId como uma string obrigatória, que será usada para relacionar com Theme.
   theme Theme @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
-  questions Questions[] // define a relação entre Subjects e Questions, onde um Subject pode ter várias Questions.
+  questions Question[] // define a relação entre Subjects e Questions, onde um Subject pode ter várias Questions.
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
   @@unique([themeId, name]) // define uma restrição de unicidade para o par de campos themeId e name.
   @@map("subjects") // define o nome da tabela no banco de dados como "subjects".
 }
 
-model Questions {
+model Question {
   id String @id @default(uuid())
-  startment String // define o campo startment como uma string obrigatória.
+  statement String // define o campo statement como uma string obrigatória.
   explanation String 
-  dificulty Difficulty // define o campo dificulty como um enum com os valores EASY, MEDIUM e HARD.
+  difficulty Difficulty // define o campo difficulty como um enum com os valores EASY, MEDIUM e HARD.
   subjectId String // define o campo subjectId como uma string obrigatória, que será usada para relacionar com Subjects.
-  subject Subjects @relation(fields: [subjectId], references: [id])
+  subject Subject @relation(fields: [subjectId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@map("questions") // define o nome da tabela no banco de dados como "questions".
