@@ -1,16 +1,9 @@
 import {Router} from 'express';
-import { prismaDB } from '../lib/prisma';
+import { getThemes } from '../controllers/theme/theme.controller';
 
 const themeRouter = Router();
 
-themeRouter.get("/cachoeira", async (_req, res) => {
-    try {
-        const themes = await prismaDB.theme.findMany();
-        return res.status(200).json(themes);
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ error: "Erro ao buscar themas" });
-    }
-})
+
+themeRouter.get("/theme", getThemes);
 
 export default themeRouter;
