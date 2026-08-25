@@ -27,17 +27,19 @@ enum Role { // define o enum Role com os valores USER e ADMIN.
 }
 
 model Theme {
-  id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
-  name String // define o campo name como uma string obrigatória.
-  createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
-  updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
-  subjects Subject[] // define a relação entre Theme e Subjects, onde um Theme pode ter vários Subjects.
-  @@map("themes") // define o nome da tabela no banco de dados como "themes".
+  id        String     @id @default(uuid())
+  name      String @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  subject Subject[]
+
+  @@map("themes")
 }
 
 model Subject {
   id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
-  name String // define o campo name como uma string obrigatória.
+  name String //define o campo name como uma string obrigatória.
   themeId String // define o campo themeId como uma string obrigatória, que será usada para relacionar com Theme.
   theme Theme @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
   questions Question[] // define a relação entre Subjects e Questions, onde um Subject pode ter várias Questions.
@@ -49,7 +51,7 @@ model Subject {
 
 model Question {
   id String @id @default(uuid())
-  statement String // define o campo statement como uma string obrigatória.
+  statement String @unique // define o campo statement como uma string obrigatória.
   explanation String 
   difficulty Difficulty // define o campo difficulty como um enum com os valores EASY, MEDIUM e HARD.
   subjectId String // define o campo subjectId como uma string obrigatória, que será usada para relacionar com Subjects.
