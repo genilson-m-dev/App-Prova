@@ -1,19 +1,33 @@
 import { prismaDB } from "../../lib/prisma";
 
-export async function createTheme(name: string) {
+export async function createTheme(name: unknown) {
+    if (typeof name !== "string") {
+        throw new Error("O nome do Theme deve ser uma string.");
+    }
+
+    const normalizedName = name.trim();
+
+    if (!normalizedName) {
+        throw new Error("O nome do Theme é obrigatório.");
+    }
+
+    if (normalizedName.length > 100) {
+        throw new Error("O nome do Theme deve ter no máximo 100 caracteres.");
+    }
+
     const existingTheme = await prismaDB.theme.findUnique({
         where: {
-            name,
+            name: normalizedName,
         },
     });
 
     if (existingTheme) {
-        return null;
+        throw new Error("Já existe um Theme com esse nome.");
     }
 
     const theme = await prismaDB.theme.create({
         data: {
-            name,
+            name: normalizedName,
         },
     });
 
