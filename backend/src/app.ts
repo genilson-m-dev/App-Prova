@@ -3,7 +3,8 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-
+import subjectRouter from "./routes/subject.routes";
+import questionRouter from "./routes/questions.routes";
 import themeRouter from "./routes/theme.routes";
 
 const app = express(); // Cria uma instância do Express
@@ -19,5 +20,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/", themeRouter); // Adiciona o roteador de temas à aplicação
+app.use("/", subjectRouter); // Adiciona o roteador de assuntos à aplicação
+app.use("/", questionRouter); // Adiciona o roteador de perguntas à aplicação
 
 export default app; // Exporta a instância do Express para ser usada em outros arquivos
