@@ -61,7 +61,7 @@ export async function createThemeController(req: Request, res: Response) {
       error instanceof Error &&
       error.message === "Já existe um Theme com esse nome."
     ) {
-     return res.status(409).json({
+      return res.status(409).json({
         error: error.message,
       });
     }

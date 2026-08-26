@@ -39,7 +39,7 @@ model Theme {
 
 model Subject {
   id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
-  name String //define o campo name como uma string obrigatória.
+  name String @unique//define o campo name como uma string obrigatória.
   themeId String // define o campo themeId como uma string obrigatória, que será usada para relacionar com Theme.
   theme Theme @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
   questions Question[] // define a relação entre Subjects e Questions, onde um Subject pode ter várias Questions.
