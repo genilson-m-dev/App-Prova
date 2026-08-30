@@ -4,6 +4,8 @@ import {
   getSubjects,
   getSubjectsByTheme,
 } from "../../services/subject/subject.service";
+import { includes } from "zod";
+import { createReadStream } from "node:fs";
 
 export async function createSubjectController(req: Request, res: Response) {
   try {
@@ -61,6 +63,15 @@ export async function getSubjectsController(_req: Request, res: Response) {
 
     return res.status(200).json({
       data: subjects,
+      includes:{
+        subjects:{
+          themes:true,
+          questions:true,
+          createdAt:true,
+          updatedAt:true
+
+        }
+      }
     });
   } catch (error) {
     console.error("Erro ao buscar Subjects:", error);

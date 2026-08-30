@@ -24,12 +24,37 @@ export async function createTheme(name: unknown) {
     if (existingTheme) {
         throw new Error("Já existe um Theme com esse nome.");
     }
+    
 
     const theme = await prismaDB.theme.create({
         data: {
             name: normalizedName,
         },
     });
+
+    return theme;
+}
+
+export async function getThemeById(id: unknown) {
+    if (typeof id !== "string") {
+        throw new Error("O id do Theme deve ser uma string.");
+    }
+
+    const normalizedId = id.trim();
+
+    if (!normalizedId) {
+        throw new Error("O id do Theme é obrigatório.");
+    }
+
+    const theme = await prismaDB.theme.findUnique({
+        where: {
+            id: normalizedId,
+        },
+    });
+
+    if (!theme) {
+        throw new Error("Theme não encontrado.");
+    }
 
     return theme;
 }
