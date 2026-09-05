@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { prismaDB } from "../../lib/prisma";
 import { createTheme } from "../../services/theme/theme.service";
-
-import {
-    getThemes as getThemesService,
-    getThemeById,
-} from "../../services/theme/theme.service";
+import { getThemeById } from "../../services/theme/theme.service";
+// import {
+//     getThemes as getThemesService,
+//     getThemeById,
+// } from "../../services/theme/theme.service";
 
 export async function getThemes(_req: Request, res: Response) {
   try {
