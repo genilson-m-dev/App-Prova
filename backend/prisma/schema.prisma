@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client" // define o gerador de código do Prisma Client.
   output   = "../src/generated/prisma" // determina onde o código gerado será colocado.
@@ -11,53 +10,56 @@ datasource db {
 // Primeiro Molde User
 
 model User {
-  id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
-  name String // define o campo name como uma string obrigatória.
-  email String @unique // define o campo email como uma string obrigatória e única.
-  password String // define o campo password como uma string obrigatória.
-  role Role @default(USER) // define o campo role como um enum com valor padrão USER.
+  id        String   @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
+  name      String // define o campo name como uma string obrigatória.
+  email     String   @unique // define o campo email como uma string obrigatória e única.
+  password  String // define o campo password como uma string obrigatória.
+  role      Role     @default(USER) // define o campo role como um enum com valor padrão USER.
   createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
   updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
+
   @@map("users") // define o nome da tabela no banco de dados como "users".
 }
 
-enum Role { // define o enum Role com os valores USER e ADMIN.
+enum Role {
   USER // define o enum Role com os valores USER e
   ADMIN // define o enum Role com os valores USER e ADMIN.
 }
 
 model Theme {
-  id        String     @id @default(uuid())
-  name      String @unique // Maria == string 123 == number false true == boolean
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id        String   @id @default(uuid())
+  name      String   @unique // Maria == string 123 == number false true == boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  subject Subject[] 
+  subject Subject[]
 
   @@map("themes")
 }
 
 model Subject {
-  id String @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
-  name String @unique//define o campo name como uma string obrigatória.
-  themeId String // define o campo themeId como uma string obrigatória, que será usada para relacionar com Theme.
-  theme Theme @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
+  id        String     @id @default(uuid()) // define o campo id como chave primária e gera um UUID automaticamente.
+  name      String     @unique //define o campo name como uma string obrigatória.
+  themeId   String // define o campo themeId como uma string obrigatória, que será usada para relacionar com Theme.
+  theme     Theme      @relation(fields: [themeId], references: [id]) // define a relação entre Subject e Theme, onde um Subject pertence a um Theme.
   questions Question[] // define a relação entre Subjects e Questions, onde um Subject pode ter várias Questions.
-  createdAt DateTime @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
-  updatedAt DateTime @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
+  createdAt DateTime   @default(now()) // define o campo createdAt como uma data e hora com valor padrão atual.
+  updatedAt DateTime   @updatedAt // define o campo updatedAt como uma data e hora que é atualizada automaticamente.
+
   @@unique([themeId, name]) // define uma restrição de unicidade para o par de campos themeId e name.
   @@map("subjects") // define o nome da tabela no banco de dados como "subjects".
 }
 
 model Question {
-  id String @id @default(uuid())
-  statement String @unique // define o campo statement como uma string obrigatória.
-  explanation String 
-  difficulty Difficulty // define o campo difficulty como um enum com os valores EASY, MEDIUM e HARD.
-  subjectId String // define o campo subjectId como uma string obrigatória, que será usada para relacionar com Subjects.
-  subject Subject @relation(fields: [subjectId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String     @id @default(uuid())
+  statement   String     @unique // define o campo statement como uma string obrigatória.
+  explanation String
+  difficulty  Difficulty // define o campo difficulty como um enum com os valores EASY, MEDIUM e HARD.
+  subjectId   String // define o campo subjectId como uma string obrigatória, que será usada para relacionar com Subjects.
+  subject     Subject    @relation(fields: [subjectId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
   @@map("questions") // define o nome da tabela no banco de dados como "questions".
 }
 
