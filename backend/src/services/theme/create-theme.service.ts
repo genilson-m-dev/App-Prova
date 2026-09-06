@@ -2,7 +2,7 @@ import { prismaDB } from "../../lib/prisma";
 
 export async function createTheme(name: unknown) {
   if (typeof name !== "string" && name !== undefined && name !== null) {
-    throw new Error("O nome do Theme deve ser uma string e não pode ser .");
+    throw new Error("O nome do Theme deve ser uma string e não pode ser \"\".");
   }
 
   const normalizedName = name?.trim();

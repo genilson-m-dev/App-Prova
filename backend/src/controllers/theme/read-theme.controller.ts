@@ -1,9 +1,5 @@
 import { Request, Response } from "express";
 import { getThemes, getThemeById } from "../../services/theme/readt-theme.service";
-// import {
-  // getThemes,
-  // getThemeById,
-// } from "../theme/read-theme.service";
 
 export async function getThemesController(_req: Request, res: Response) {
   try {

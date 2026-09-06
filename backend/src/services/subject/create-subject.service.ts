@@ -63,3 +63,52 @@ export async function createSubject(
 
     return subject;
 }
+
+/**
+ * Busca todos os Subjects cadastrados.
+ */
+export async function getSubjects() {
+    const subjects = await prismaDB.subject.findMany({
+        orderBy: {
+            name: "asc",
+        },
+    });
+
+    return subjects;
+}
+
+/**
+ * Busca todos os Subjects pertencentes a um Theme.
+ */
+export async function getSubjectsByTheme(themeId: unknown) {
+    if (typeof themeId !== "string") {
+        throw new Error("O themeId deve ser uma string.");
+    }
+
+    const normalizedThemeId = themeId.trim();
+
+    if (!normalizedThemeId) {
+        throw new Error("O themeId é obrigatório.");
+    }
+
+    const theme = await prismaDB.theme.findUnique({
+        where: {
+            id: normalizedThemeId,
+        },
+    });
+
+    if (!theme) {
+        throw new Error("Theme não encontrado.");
+    }
+
+    const subjects = await prismaDB.subject.findMany({
+        where: {
+            themeId: normalizedThemeId,
+        },
+        orderBy: {
+            name: "asc",
+        },
+    });
+
+    return subjects;
+}
