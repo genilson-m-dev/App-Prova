@@ -6,7 +6,7 @@ export async function updateQuestionController(
   res: Response
 ) {
   try {
-    const { id } = req.params;
+    const { id } = req.params; //LKJ5587999939131
 
     const {
       statement,
