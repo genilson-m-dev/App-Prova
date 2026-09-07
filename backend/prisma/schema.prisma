@@ -50,21 +50,66 @@ model Subject {
   @@map("subjects") // define o nome da tabela no banco de dados como "subjects".
 }
 
-model Question {
-  id          String     @id @default(uuid())
-  statement   String     @unique // define o campo statement como uma string obrigatória.
-  explanation String
-  difficulty  Difficulty // define o campo difficulty como um enum com os valores EASY, MEDIUM e HARD.
-  subjectId   String // define o campo subjectId como uma string obrigatória, que será usada para relacionar com Subjects.
-  subject     Subject    @relation(fields: [subjectId], references: [id])
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+// model Question {
+//   id          String     @id @default(uuid())
+//   statement   String     @unique // define o campo statement como uma string obrigatória.
+//   explanation String
+//   difficulty  Difficulty // define o campo difficulty como um enum com os valores EASY, MEDIUM e HARD.
+//   subjectId   String // define o campo subjectId como uma string obrigatória, que será usada para relacionar com Subjects.
+//   subject     Subject    @relation(fields: [subjectId], references: [id])
+//   createdAt   DateTime   @default(now())
+//   updatedAt   DateTime   @updatedAt
 
-  @@map("questions") // define o nome da tabela no banco de dados como "questions".
+//   @@map("questions") // define o nome da tabela no banco de dados como "questions".
+// }
+
+model Question {
+  id          String         @id @default(uuid())
+  statement   String         @unique
+  explanation String
+  difficulty  Difficulty
+  type        QuestionType
+  bank        QuestionBank
+  subjectId   String
+
+  subject     Subject        @relation(fields: [subjectId], references: [id])
+  options     QuestionOption[]
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("questions")
 }
 
+model QuestionOption {
+  id         String   @id @default(uuid())
+  text       String
+  isCorrect  Boolean  @default(false)
+  questionId String
+
+  question   Question @relation(fields: [questionId], references: [id])
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("question_options")
+}
+
+enum QuestionType {
+  TRUE_FALSE
+  MULTIPLE_CHOICE
+  MULTIPLE_ANSWER
+}
+enum QuestionBank {
+  CEBRASPE
+  FCC
+  CENSAGRARIO
+  OTHER
+}
 enum Difficulty {
   BEGINNER
   MEDIUM
   HARD
 }
+
+

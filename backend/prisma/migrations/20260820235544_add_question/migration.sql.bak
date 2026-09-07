@@ -4,9 +4,9 @@ CREATE TYPE "Difficulty" AS ENUM ('BEGINNER', 'MEDIUM', 'HARD');
 -- CreateTable
 CREATE TABLE "questions" (
     "id" TEXT NOT NULL,
-    "statement" TEXT NOT NULL,
+    "startment" TEXT NOT NULL,
     "explanation" TEXT NOT NULL,
-    "difficulty" "Difficulty" NOT NULL,
+    "dificulty" "Difficulty" NOT NULL,
     "subjectId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
