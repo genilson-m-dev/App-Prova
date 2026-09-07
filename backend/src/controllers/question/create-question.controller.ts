@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+
 import { createQuestion } from "../../services/question/create-question.service";
 
 export async function createQuestionController(
@@ -10,14 +11,20 @@ export async function createQuestionController(
       statement,
       explanation,
       difficulty,
+      type,
+      bank,
       subjectId,
+      options,
     } = req.body;
 
     const question = await createQuestion(
       statement,
       explanation,
       difficulty,
-      subjectId
+      type,
+      bank,
+      subjectId,
+      options
     );
 
     return res.status(201).json({
@@ -36,12 +43,57 @@ export async function createQuestionController(
       "O statement deve ser uma string.",
       "A explanation deve ser uma string.",
       "A difficulty deve ser uma string.",
+      "O type deve ser uma string.",
+      "O bank deve ser uma string.",
       "O subjectId deve ser uma string.",
+      "As options devem ser um array.",
+
       "O statement é obrigatório.",
       "A explanation é obrigatória.",
       "A difficulty é obrigatória.",
+      "O type é obrigatório.",
+      "O bank é obrigatório.",
       "O subjectId é obrigatório.",
+
       "A difficulty deve ser BEGINNER, MEDIUM ou HARD.",
+
+      "O type deve ser TRUE_FALSE, MULTIPLE_CHOICE ou MULTIPLE_ANSWER.",
+
+      "O bank deve ser CEBRASPE, FCC, CENSAGRARIO ou OTHER.",
+
+      "A Question deve possuir pelo menos uma option.",
+
+      "Cada option deve ser um objeto.",
+
+      "O texto de cada option deve ser uma string.",
+
+      "O isCorrect de cada option deve ser boolean.",
+
+      "O texto da option é obrigatório.",
+
+      "Não podem existir options duplicadas na Question.",
+
+      "Uma Question TRUE_FALSE deve possuir exatamente 2 options.",
+
+      "Uma Question TRUE_FALSE deve possuir exatamente 1 option correta.",
+
+      "Uma Question TRUE_FALSE deve possuir exatamente 1 option incorreta.",
+
+      "Uma Question MULTIPLE_CHOICE deve possuir exatamente 5 options.",
+
+      "Uma Question MULTIPLE_CHOICE deve possuir exatamente 1 option correta.",
+
+      "Uma Question MULTIPLE_CHOICE deve possuir exatamente 4 options incorretas.",
+
+      "Uma Question MULTIPLE_ANSWER deve possuir entre 2 e 5 options.",
+
+      "Uma Question MULTIPLE_ANSWER deve possuir entre 2 e 4 options corretas.",
+
+      "Uma Question MULTIPLE_ANSWER deve possuir pelo menos 1 option incorreta.",
+
+      "Questions do banco CEBRASPE devem utilizar o type TRUE_FALSE.",
+
+      "Uma Question CEBRASPE deve possuir as options Certo e Errado.",
     ];
 
     if (badRequestErrors.includes(error.message)) {
