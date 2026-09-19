@@ -1,376 +1,1252 @@
 import { prismaDB } from "../../lib/prisma";
 
-type QuestionOptionInput = {
-  text: unknown;
-  isCorrect: unknown;
+/**
+ * Tipos normalizados
+ */
+
+type QuestionDifficulty =
+  | "BEGINNER"
+  | "MEDIUM"
+  | "HARD";
+
+type QuestionType =
+  | "TRUE_FALSE"
+  | "MULTIPLE_CHOICE"
+  | "MULTIPLE_ANSWER";
+
+type QuestionBank =
+  | "CEBRASPE"
+  | "FCC"
+  | "CENSAGRARIO"
+  | "OTHER";
+
+export type NormalizedQuestionOption = {
+  text: string;
+  isCorrect: boolean;
 };
 
+export type NormalizedQuestion = {
+  statement: string;
+  explanation: string;
+  difficulty: QuestionDifficulty;
+  type: QuestionType;
+  bank: QuestionBank;
+  subjectId: string;
+  options: NormalizedQuestionOption[];
+};
+
+/**
+ * Detalhes de erro de validação
+ */
+
+export type QuestionBatchValidationDetail = {
+  index?: number;
+  field: string;
+  optionIndex?: number;
+  message: string;
+};
+
+/**
+ * Erro específico de validação do lote
+ */
+
+export class QuestionBatchValidationError extends Error {
+  public readonly details: QuestionBatchValidationDetail[];
+
+  constructor(
+    details: QuestionBatchValidationDetail[]
+  ) {
+    super("Erro de validação no lote.");
+
+    this.name =
+      "QuestionBatchValidationError";
+
+    this.details = details;
+  }
+}
+
+/**
+ * Mantém o índice original da Question
+ * durante as validações.
+ */
+
+type NormalizedQuestionWithIndex = {
+  index: number;
+  question: NormalizedQuestion;
+};
+
+/**
+ * Função principal do CREATE.
+ *
+ * Neste momento ela executa somente a Fase 1:
+ *
+ * 1. validação local
+ * 2. normalização
+ *
+ * Ainda não consulta o banco.
+ * Ainda não cria registros.
+ *
+ * Isso será implementado nas próximas fases.
+ */
+
 export async function createQuestion(
-  statement: unknown,
-  explanation: unknown,
-  difficulty: unknown,
-  type: unknown,
-  bank: unknown,
-  subjectId: unknown,
-  options: unknown
+  input: unknown
 ) {
-  // ==========================================
-  // 1. Validação dos tipos básicos
-  // ==========================================
+  const normalizedQuestions =
+    validateAndNormalizeQuestionBatch(
+      input
+    );
+
+  return normalizedQuestions;
+}
+
+/**
+ * FASE 1
+ *
+ * Valida e normaliza o lote inteiro.
+ */
+
+export function validateAndNormalizeQuestionBatch(
+  input: unknown
+): NormalizedQuestion[] {
+  const errors: QuestionBatchValidationDetail[] =
+    [];
+
+  /**
+   * Validação do body
+   */
+
+  if (
+    input === null ||
+    typeof input !== "object" ||
+    Array.isArray(input)
+  ) {
+    throw new QuestionBatchValidationError([
+      {
+        field: "body",
+        message:
+          "O body da requisição deve ser um objeto.",
+      },
+    ]);
+  }
+
+  const body =
+    input as Record<string, unknown>;
+
+  /**
+   * Validação do campo questions
+   */
+
+  if (!Array.isArray(body.questions)) {
+    throw new QuestionBatchValidationError([
+      {
+        field: "questions",
+        message:
+          "O campo questions deve ser um array.",
+      },
+    ]);
+  }
+
+  const questions = body.questions;
+
+  /**
+   * Quantidade mínima
+   */
+
+  if (questions.length === 0) {
+    throw new QuestionBatchValidationError([
+      {
+        field: "questions",
+        message:
+          "O lote deve possuir pelo menos 1 Question.",
+      },
+    ]);
+  }
+
+  /**
+   * Quantidade máxima
+   */
+
+  if (questions.length > 100) {
+    throw new QuestionBatchValidationError([
+      {
+        field: "questions",
+        message:
+          "O lote não pode possuir mais de 100 Questions.",
+      },
+    ]);
+  }
+
+  /**
+   * Questions que conseguiram ser
+   * normalizadas.
+   *
+   * Mantemos o índice original.
+   */
+
+  const normalizedQuestions: NormalizedQuestionWithIndex[] =
+    [];
+
+  /**
+   * Valida cada Question individualmente.
+   */
+
+  for (
+    let index = 0;
+    index < questions.length;
+    index++
+  ) {
+    const normalizedQuestion =
+      validateAndNormalizeQuestion(
+        questions[index],
+        index,
+        errors
+      );
+
+    if (normalizedQuestion) {
+      normalizedQuestions.push({
+        index,
+        question: normalizedQuestion,
+      });
+    }
+  }
+
+  /**
+   * Verifica statements duplicados
+   * dentro do próprio lote.
+   */
+
+  validateDuplicateStatements(
+    normalizedQuestions,
+    errors
+  );
+
+  /**
+   * Se houver qualquer erro,
+   * nenhuma Question será criada.
+   */
+
+  if (errors.length > 0) {
+    throw new QuestionBatchValidationError(
+      errors
+    );
+  }
+
+  /**
+   * Retorna somente as Questions
+   * normalizadas.
+   */
+
+  return normalizedQuestions.map(
+    (item) => item.question
+  );
+}
+
+/**
+ * Valida e normaliza uma Question.
+ */
+
+function validateAndNormalizeQuestion(
+  input: unknown,
+  index: number,
+  errors: QuestionBatchValidationDetail[]
+): NormalizedQuestion | null {
+  /**
+   * A Question precisa ser um objeto.
+   */
+
+  if (
+    input === null ||
+    typeof input !== "object" ||
+    Array.isArray(input)
+  ) {
+    errors.push({
+      index,
+      field: "question",
+      message:
+        "Cada item de questions deve ser um objeto.",
+    });
+
+    return null;
+  }
+
+  const question =
+    input as Record<string, unknown>;
+
+  const statement =
+    question.statement;
+
+  const explanation =
+    question.explanation;
+
+  const difficulty =
+    question.difficulty;
+
+  const type =
+    question.type;
+
+  const bank =
+    question.bank;
+
+  const subjectId =
+    question.subjectId;
+
+  const options =
+    question.options;
+
+  /**
+   * =========================================
+   * 1. VALIDAÇÃO ESTRUTURAL
+   * =========================================
+   */
+
+  let hasStructuralError = false;
+
+  /**
+   * statement
+   */
 
   if (typeof statement !== "string") {
-    throw new Error("O statement deve ser uma string.");
+    errors.push({
+      index,
+      field: "statement",
+      message:
+        "O statement deve ser uma string.",
+    });
+
+    hasStructuralError = true;
   }
 
-  if (typeof explanation !== "string") {
-    throw new Error("A explanation deve ser uma string.");
+  /**
+   * explanation
+   */
+
+  if (
+    typeof explanation !== "string"
+  ) {
+    errors.push({
+      index,
+      field: "explanation",
+      message:
+        "A explanation deve ser uma string.",
+    });
+
+    hasStructuralError = true;
   }
 
-  if (typeof difficulty !== "string") {
-    throw new Error("A difficulty deve ser uma string.");
+  /**
+   * difficulty
+   */
+
+  if (
+    typeof difficulty !== "string"
+  ) {
+    errors.push({
+      index,
+      field: "difficulty",
+      message:
+        "A difficulty deve ser uma string.",
+    });
+
+    hasStructuralError = true;
   }
+
+  /**
+   * type
+   */
 
   if (typeof type !== "string") {
-    throw new Error("O type deve ser uma string.");
+    errors.push({
+      index,
+      field: "type",
+      message:
+        "O type deve ser uma string.",
+    });
+
+    hasStructuralError = true;
   }
+
+  /**
+   * bank
+   */
 
   if (typeof bank !== "string") {
-    throw new Error("O bank deve ser uma string.");
+    errors.push({
+      index,
+      field: "bank",
+      message:
+        "O bank deve ser uma string.",
+    });
+
+    hasStructuralError = true;
   }
 
-  if (typeof subjectId !== "string") {
-    throw new Error("O subjectId deve ser uma string.");
+  /**
+   * subjectId
+   */
+
+  if (
+    typeof subjectId !== "string"
+  ) {
+    errors.push({
+      index,
+      field: "subjectId",
+      message:
+        "O subjectId deve ser uma string.",
+    });
+
+    hasStructuralError = true;
   }
+
+  /**
+   * options
+   */
 
   if (!Array.isArray(options)) {
-    throw new Error("As options devem ser um array.");
+    errors.push({
+      index,
+      field: "options",
+      message:
+        "As options devem ser um array.",
+    });
+
+    hasStructuralError = true;
   }
 
-  // ==========================================
-  // 2. Normalização
-  // ==========================================
+  /**
+   * Se houver erro estrutural,
+   * não continuamos nessa Question.
+   */
 
-  const normalizedStatement = statement.trim();
-  const normalizedExplanation = explanation.trim();
-  const normalizedDifficulty = difficulty.trim().toUpperCase();
-  const normalizedType = type.trim().toUpperCase();
-  const normalizedBank = bank.trim().toUpperCase();
-  const normalizedSubjectId = subjectId.trim();
+  if (hasStructuralError) {
+    return null;
+  }
 
-  // ==========================================
-  // 3. Campos obrigatórios
-  // ==========================================
+  /**
+   * Depois das validações acima,
+   * podemos informar ao TypeScript
+   * os tipos corretos.
+   */
+
+  const statementValue =
+    statement as string;
+
+  const explanationValue =
+    explanation as string;
+
+  const difficultyValue =
+    difficulty as string;
+
+  const typeValue =
+    type as string;
+
+  const bankValue =
+    bank as string;
+
+  const subjectIdValue =
+    subjectId as string;
+
+  const optionsValue =
+    options as unknown[];
+
+  /**
+   * =========================================
+   * 2. NORMALIZAÇÃO
+   * =========================================
+   */
+
+  const normalizedStatement =
+    statementValue.trim();
+
+  const normalizedExplanation =
+    explanationValue.trim();
+
+  const normalizedDifficulty =
+    difficultyValue
+      .trim()
+      .toUpperCase();
+
+  const normalizedType =
+    typeValue
+      .trim()
+      .toUpperCase();
+
+  const normalizedBank =
+    bankValue
+      .trim()
+      .toUpperCase();
+
+  const normalizedSubjectId =
+    subjectIdValue.trim();
+
+  /**
+   * =========================================
+   * 3. CAMPOS OBRIGATÓRIOS
+   * =========================================
+   */
+
+  let hasRequiredError = false;
 
   if (!normalizedStatement) {
-    throw new Error("O statement é obrigatório.");
+    errors.push({
+      index,
+      field: "statement",
+      message:
+        "O statement é obrigatório.",
+    });
+
+    hasRequiredError = true;
   }
 
   if (!normalizedExplanation) {
-    throw new Error("A explanation é obrigatória.");
+    errors.push({
+      index,
+      field: "explanation",
+      message:
+        "A explanation é obrigatória.",
+    });
+
+    hasRequiredError = true;
   }
 
   if (!normalizedDifficulty) {
-    throw new Error("A difficulty é obrigatória.");
+    errors.push({
+      index,
+      field: "difficulty",
+      message:
+        "A difficulty é obrigatória.",
+    });
+
+    hasRequiredError = true;
   }
 
   if (!normalizedType) {
-    throw new Error("O type é obrigatório.");
+    errors.push({
+      index,
+      field: "type",
+      message:
+        "O type é obrigatório.",
+    });
+
+    hasRequiredError = true;
   }
 
   if (!normalizedBank) {
-    throw new Error("O bank é obrigatório.");
+    errors.push({
+      index,
+      field: "bank",
+      message:
+        "O bank é obrigatório.",
+    });
+
+    hasRequiredError = true;
   }
 
   if (!normalizedSubjectId) {
-    throw new Error("O subjectId é obrigatório.");
+    errors.push({
+      index,
+      field: "subjectId",
+      message:
+        "O subjectId é obrigatório.",
+    });
+
+    hasRequiredError = true;
   }
 
-  // ==========================================
-  // 4. Validação dos enums
-  // ==========================================
+  /**
+   * Se houver campo obrigatório
+   * faltando, não continuamos.
+   */
 
-  const validDifficulties = [
-    "BEGINNER",
-    "MEDIUM",
-    "HARD",
-  ];
+  if (hasRequiredError) {
+    return null;
+  }
 
-  if (!validDifficulties.includes(normalizedDifficulty)) {
-    throw new Error(
-      "A difficulty deve ser BEGINNER, MEDIUM ou HARD."
+  /**
+   * =========================================
+   * 4. ENUMS
+   * =========================================
+   */
+
+  const normalizedDifficultyValue =
+    validateDifficulty(
+      normalizedDifficulty,
+      index,
+      errors
     );
-  }
 
-  const validTypes = [
-    "TRUE_FALSE",
-    "MULTIPLE_CHOICE",
-    "MULTIPLE_ANSWER",
-  ];
-
-  if (!validTypes.includes(normalizedType)) {
-    throw new Error(
-      "O type deve ser TRUE_FALSE, MULTIPLE_CHOICE ou MULTIPLE_ANSWER."
+  const normalizedTypeValue =
+    validateQuestionType(
+      normalizedType,
+      index,
+      errors
     );
-  }
 
-  const validBanks = [
-    "CEBRASPE",
-    "FCC",
-    "CENSAGRARIO",
-    "OTHER",
-  ];
-
-  if (!validBanks.includes(normalizedBank)) {
-    throw new Error(
-      "O bank deve ser CEBRASPE, FCC, CENSAGRARIO ou OTHER."
+  const normalizedBankValue =
+    validateQuestionBank(
+      normalizedBank,
+      index,
+      errors
     );
+
+  /**
+   * Se algum enum for inválido,
+   * não continuamos.
+   */
+
+  if (
+    !normalizedDifficultyValue ||
+    !normalizedTypeValue ||
+    !normalizedBankValue
+  ) {
+    return null;
   }
 
-  // ==========================================
-  // 5. Validação das options
-  // ==========================================
+  /**
+   * =========================================
+   * 5. OPTIONS
+   * =========================================
+   */
 
-  if (options.length === 0) {
-    throw new Error(
-      "A Question deve possuir pelo menos uma option."
+  const normalizedOptions =
+    validateAndNormalizeOptions(
+      optionsValue,
+      index,
+      errors
     );
+
+  /**
+   * Se alguma option possuir
+   * erro estrutural, não continuamos.
+   */
+
+  if (!normalizedOptions) {
+    return null;
   }
 
-  const normalizedOptions: {
-    text: string;
-    isCorrect: boolean;
-  }[] = [];
+  /**
+   * =========================================
+   * 6. REGRAS DO QUESTION TYPE
+   * =========================================
+   */
 
-  for (const option of options as QuestionOptionInput[]) {
+  const errorsBeforeRules =
+    errors.length;
+
+  validateQuestionTypeRules(
+    normalizedTypeValue,
+    normalizedOptions,
+    index,
+    errors
+  );
+
+  /**
+   * =========================================
+   * 7. REGRAS DO QUESTION BANK
+   * =========================================
+   */
+
+  validateQuestionBankRules(
+    normalizedBankValue,
+    normalizedTypeValue,
+    normalizedOptions,
+    index,
+    errors
+  );
+
+  /**
+   * Verifica se as regras acima
+   * adicionaram algum erro.
+   */
+
+  if (
+    errors.length >
+    errorsBeforeRules
+  ) {
+    return null;
+  }
+
+  /**
+   * =========================================
+   * QUESTION NORMALIZADA
+   * =========================================
+   */
+
+  return {
+    statement:
+      normalizedStatement,
+
+    explanation:
+      normalizedExplanation,
+
+    difficulty:
+      normalizedDifficultyValue,
+
+    type:
+      normalizedTypeValue,
+
+    bank:
+      normalizedBankValue,
+
+    subjectId:
+      normalizedSubjectId,
+
+    options:
+      normalizedOptions,
+  };
+}
+
+/**
+ * Valida Difficulty.
+ */
+
+function validateDifficulty(
+  value: string,
+  index: number,
+  errors: QuestionBatchValidationDetail[]
+): QuestionDifficulty | null {
+  const validValues: QuestionDifficulty[] =
+    [
+      "BEGINNER",
+      "MEDIUM",
+      "HARD",
+    ];
+
+  if (
+    !validValues.includes(
+      value as QuestionDifficulty
+    )
+  ) {
+    errors.push({
+      index,
+      field: "difficulty",
+      message:
+        "A difficulty deve ser BEGINNER, MEDIUM ou HARD.",
+    });
+
+    return null;
+  }
+
+  return value as QuestionDifficulty;
+}
+
+/**
+ * Valida QuestionType.
+ */
+
+function validateQuestionType(
+  value: string,
+  index: number,
+  errors: QuestionBatchValidationDetail[]
+): QuestionType | null {
+  const validValues: QuestionType[] =
+    [
+      "TRUE_FALSE",
+      "MULTIPLE_CHOICE",
+      "MULTIPLE_ANSWER",
+    ];
+
+  if (
+    !validValues.includes(
+      value as QuestionType
+    )
+  ) {
+    errors.push({
+      index,
+      field: "type",
+      message:
+        "O type deve ser TRUE_FALSE, MULTIPLE_CHOICE ou MULTIPLE_ANSWER.",
+    });
+
+    return null;
+  }
+
+  return value as QuestionType;
+}
+
+/**
+ * Valida QuestionBank.
+ */
+
+function validateQuestionBank(
+  value: string,
+  index: number,
+  errors: QuestionBatchValidationDetail[]
+): QuestionBank | null {
+  const validValues: QuestionBank[] =
+    [
+      "CEBRASPE",
+      "FCC",
+      "CENSAGRARIO",
+      "OTHER",
+    ];
+
+  if (
+    !validValues.includes(
+      value as QuestionBank
+    )
+  ) {
+    errors.push({
+      index,
+      field: "bank",
+      message:
+        "O bank deve ser CEBRASPE, FCC, CENSAGRARIO ou OTHER.",
+    });
+
+    return null;
+  }
+
+  return value as QuestionBank;
+}
+
+/**
+ * Valida e normaliza Options.
+ */
+
+function validateAndNormalizeOptions(
+  input: unknown[],
+  questionIndex: number,
+  errors: QuestionBatchValidationDetail[]
+): NormalizedQuestionOption[] | null {
+  const normalizedOptions: NormalizedQuestionOption[] =
+    [];
+
+  /**
+   * Percorre todas as options.
+   */
+
+  for (
+    let optionIndex = 0;
+    optionIndex < input.length;
+    optionIndex++
+  ) {
+    const option =
+      input[optionIndex];
+
+    /**
+     * Option precisa ser objeto.
+     */
+
     if (
       option === null ||
-      typeof option !== "object"
+      typeof option !== "object" ||
+      Array.isArray(option)
     ) {
-      throw new Error(
-        "Cada option deve ser um objeto."
-      );
+      errors.push({
+        index: questionIndex,
+        field: "options",
+        optionIndex,
+        message:
+          "Cada option deve ser um objeto.",
+      });
+
+      continue;
     }
 
-    if (typeof option.text !== "string") {
-      throw new Error(
-        "O texto de cada option deve ser uma string."
-      );
+    const optionObject =
+      option as Record<
+        string,
+        unknown
+      >;
+
+    /**
+     * text
+     */
+
+    if (
+      typeof optionObject.text !==
+      "string"
+    ) {
+      errors.push({
+        index: questionIndex,
+        field: "options",
+        optionIndex,
+        message:
+          "O texto de cada option deve ser uma string.",
+      });
+
+      continue;
     }
 
-    if (typeof option.isCorrect !== "boolean") {
-      throw new Error(
-        "O isCorrect de cada option deve ser boolean."
-      );
+    /**
+     * isCorrect
+     */
+
+    if (
+      typeof optionObject.isCorrect !==
+      "boolean"
+    ) {
+      errors.push({
+        index: questionIndex,
+        field: "options",
+        optionIndex,
+        message:
+          "O isCorrect de cada option deve ser boolean.",
+      });
+
+      continue;
     }
 
-    const normalizedText = option.text.trim();
+    /**
+     * Normaliza o texto.
+     */
+
+    const normalizedText =
+      optionObject.text.trim();
+
+    /**
+     * Texto obrigatório.
+     */
 
     if (!normalizedText) {
-      throw new Error(
-        "O texto da option é obrigatório."
-      );
+      errors.push({
+        index: questionIndex,
+        field: "options",
+        optionIndex,
+        message:
+          "O texto da option é obrigatório.",
+      });
+
+      continue;
     }
+
+    /**
+     * Adiciona option normalizada.
+     */
 
     normalizedOptions.push({
       text: normalizedText,
-      isCorrect: option.isCorrect,
+      isCorrect:
+        optionObject.isCorrect,
     });
   }
 
-  // ==========================================
-  // 6. Verificar options duplicadas
-  // ==========================================
+  /**
+   * Se alguma option apresentou
+   * erro estrutural, não continuamos.
+   */
 
-  const optionTexts = normalizedOptions.map((option) =>
-    option.text.toLowerCase()
-  );
-
-  const uniqueOptionTexts = new Set(optionTexts);
-
-  if (uniqueOptionTexts.size !== optionTexts.length) {
-    throw new Error(
-      "Não podem existir options duplicadas na Question."
-    );
+  if (
+    normalizedOptions.length !==
+    input.length
+  ) {
+    return null;
   }
 
-  // ==========================================
-  // 7. Quantidade de options corretas
-  // ==========================================
+  /**
+   * Verifica duplicidade.
+   */
 
-  const correctOptions = normalizedOptions.filter(
-    (option) => option.isCorrect
+  validateDuplicateOptions(
+    normalizedOptions,
+    questionIndex,
+    errors
   );
 
-  const incorrectOptions = normalizedOptions.filter(
-    (option) => !option.isCorrect
-  );
+  return normalizedOptions;
+}
 
-  const totalOptions = normalizedOptions.length;
-  const totalCorrect = correctOptions.length;
-  const totalIncorrect = incorrectOptions.length;
+/**
+ * Verifica options duplicadas
+ * dentro da mesma Question.
+ */
 
-  // ==========================================
-  // 8. Regras do TRUE_FALSE
-  // ==========================================
+function validateDuplicateOptions(
+  options: NormalizedQuestionOption[],
+  questionIndex: number,
+  errors: QuestionBatchValidationDetail[]
+) {
+  const seen =
+    new Map<string, number>();
 
-  if (normalizedType === "TRUE_FALSE") {
+  for (
+    let optionIndex = 0;
+    optionIndex < options.length;
+    optionIndex++
+  ) {
+    const normalizedText =
+      options[
+        optionIndex
+      ].text.toLowerCase();
+
+    if (
+      seen.has(normalizedText)
+    ) {
+      errors.push({
+        index: questionIndex,
+        field: "options",
+        optionIndex,
+        message:
+          "Não podem existir options duplicadas na Question.",
+      });
+
+      continue;
+    }
+
+    seen.set(
+      normalizedText,
+      optionIndex
+    );
+  }
+}
+
+/**
+ * Regras de cada QuestionType.
+ */
+
+function validateQuestionTypeRules(
+  type: QuestionType,
+  options: NormalizedQuestionOption[],
+  index: number,
+  errors: QuestionBatchValidationDetail[]
+) {
+  const totalOptions =
+    options.length;
+
+  const totalCorrect =
+    options.filter(
+      (option) =>
+        option.isCorrect
+    ).length;
+
+  const totalIncorrect =
+    totalOptions - totalCorrect;
+
+  /**
+   * TRUE_FALSE
+   *
+   * Exatamente:
+   * 2 options
+   * 1 correta
+   * 1 incorreta
+   */
+
+  if (type === "TRUE_FALSE") {
     if (totalOptions !== 2) {
-      throw new Error(
-        "Uma Question TRUE_FALSE deve possuir exatamente 2 options."
-      );
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question TRUE_FALSE deve possuir exatamente 2 options.",
+      });
     }
 
     if (totalCorrect !== 1) {
-      throw new Error(
-        "Uma Question TRUE_FALSE deve possuir exatamente 1 option correta."
-      );
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question TRUE_FALSE deve possuir exatamente 1 option correta.",
+      });
     }
 
     if (totalIncorrect !== 1) {
-      throw new Error(
-        "Uma Question TRUE_FALSE deve possuir exatamente 1 option incorreta."
-      );
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question TRUE_FALSE deve possuir exatamente 1 option incorreta.",
+      });
     }
   }
 
-  // ==========================================
-  // 9. Regras do MULTIPLE_CHOICE
-  // ==========================================
+  /**
+   * MULTIPLE_CHOICE
+   *
+   * Exatamente:
+   * 5 options
+   * 1 correta
+   * 4 incorretas
+   */
 
-  if (normalizedType === "MULTIPLE_CHOICE") {
+  if (
+    type === "MULTIPLE_CHOICE"
+  ) {
     if (totalOptions !== 5) {
-      throw new Error(
-        "Uma Question MULTIPLE_CHOICE deve possuir exatamente 5 options."
-      );
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question MULTIPLE_CHOICE deve possuir exatamente 5 options.",
+      });
     }
 
     if (totalCorrect !== 1) {
-      throw new Error(
-        "Uma Question MULTIPLE_CHOICE deve possuir exatamente 1 option correta."
-      );
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question MULTIPLE_CHOICE deve possuir exatamente 1 option correta.",
+      });
     }
 
     if (totalIncorrect !== 4) {
-      throw new Error(
-        "Uma Question MULTIPLE_CHOICE deve possuir exatamente 4 options incorretas."
-      );
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question MULTIPLE_CHOICE deve possuir exatamente 4 options incorretas.",
+      });
     }
   }
 
-  // ==========================================
-  // 10. Regras do MULTIPLE_ANSWER
-  // ==========================================
+  /**
+   * MULTIPLE_ANSWER
+   *
+   * Entre:
+   * 2 e 5 options
+   * 2 e 4 corretas
+   * pelo menos 1 incorreta
+   */
 
-  if (normalizedType === "MULTIPLE_ANSWER") {
-    if (totalOptions < 2 || totalOptions > 5) {
-      throw new Error(
-        "Uma Question MULTIPLE_ANSWER deve possuir entre 2 e 5 options."
-      );
+  if (
+    type === "MULTIPLE_ANSWER"
+  ) {
+    if (
+      totalOptions < 2 ||
+      totalOptions > 5
+    ) {
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question MULTIPLE_ANSWER deve possuir entre 2 e 5 options.",
+      });
     }
 
-    if (totalCorrect < 2 || totalCorrect > 4) {
-      throw new Error(
-        "Uma Question MULTIPLE_ANSWER deve possuir entre 2 e 4 options corretas."
-      );
+    if (
+      totalCorrect < 2 ||
+      totalCorrect > 4
+    ) {
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question MULTIPLE_ANSWER deve possuir entre 2 e 4 options corretas.",
+      });
     }
 
     if (totalIncorrect < 1) {
-      throw new Error(
-        "Uma Question MULTIPLE_ANSWER deve possuir pelo menos 1 option incorreta."
-      );
+      errors.push({
+        index,
+        field: "options",
+        message:
+          "Uma Question MULTIPLE_ANSWER deve possuir pelo menos 1 option incorreta.",
+      });
     }
   }
+}
 
-  // ==========================================
-  // 11. Regra específica do CEBRASPE
-  // ==========================================
+/**
+ * Regras específicas do banco CEBRASPE.
+ */
 
-  if (normalizedBank === "CEBRASPE") {
-    if (normalizedType !== "TRUE_FALSE") {
-      throw new Error(
-        "Questions do banco CEBRASPE devem utilizar o type TRUE_FALSE."
-      );
-    }
+function validateQuestionBankRules(
+  bank: QuestionBank,
+  type: QuestionType,
+  options: NormalizedQuestionOption[],
+  index: number,
+  errors: QuestionBatchValidationDetail[]
+) {
+  /**
+   * Os outros bancos não possuem
+   * regra específica neste momento.
+   */
 
-    const optionNames = normalizedOptions.map((option) =>
-      option.text.trim().toLowerCase()
+  if (bank !== "CEBRASPE") {
+    return;
+  }
+
+  /**
+   * CEBRASPE precisa utilizar
+   * TRUE_FALSE.
+   */
+
+  if (type !== "TRUE_FALSE") {
+    errors.push({
+      index,
+      field: "type",
+      message:
+        "Questions do banco CEBRASPE devem utilizar o type TRUE_FALSE.",
+    });
+
+    return;
+  }
+
+  /**
+   * CEBRASPE precisa possuir
+   * Certo e Errado.
+   */
+
+  const optionNames =
+    options.map(
+      (option) =>
+        option.text
+          .trim()
+          .toLowerCase()
     );
 
-    const hasCerto = optionNames.includes("certo");
-    const hasErrado = optionNames.includes("errado");
+  const hasCerto =
+    optionNames.includes(
+      "certo"
+    );
 
-    if (!hasCerto || !hasErrado) {
-      throw new Error(
-        "Uma Question CEBRASPE deve possuir as options Certo e Errado."
-      );
+  const hasErrado =
+    optionNames.includes(
+      "errado"
+    );
+
+  if (
+    !hasCerto ||
+    !hasErrado
+  ) {
+    errors.push({
+      index,
+      field: "options",
+      message:
+        "Uma Question CEBRASPE deve possuir as options Certo e Errado.",
+    });
+  }
+}
+
+/**
+ * Verifica statements duplicados
+ * dentro do próprio lote.
+ */
+
+function validateDuplicateStatements(
+  questions: NormalizedQuestionWithIndex[],
+  errors: QuestionBatchValidationDetail[]
+) {
+  const seen =
+    new Map<string, number>();
+
+  for (const item of questions) {
+    const normalizedStatement =
+      item.question.statement
+        .toLowerCase();
+
+    if (
+      seen.has(normalizedStatement)
+    ) {
+      const previousIndex =
+        seen.get(
+          normalizedStatement
+        )!;
+
+      errors.push({
+        index: item.index,
+        field: "statement",
+        message:
+          `Já existe outro statement igual neste lote, no índice ${previousIndex}.`,
+      });
+
+      continue;
     }
-  }
 
-  // ==========================================
-  // 12. Verificar Subject
-  // ==========================================
-
-  const subject = await prismaDB.subject.findUnique({
-    where: {
-      id: normalizedSubjectId,
-    },
-  });
-
-  if (!subject) {
-    throw new Error("Subject não encontrado.");
-  }
-
-  // ==========================================
-  // 13. Verificar statement duplicado
-  // ==========================================
-
-  const existingQuestion = await prismaDB.question.findUnique({
-    where: {
-      statement: normalizedStatement,
-    },
-  });
-
-  if (existingQuestion) {
-    throw new Error(
-      "Já existe uma Question com esse statement."
+    seen.set(
+      normalizedStatement,
+      item.index
     );
   }
-
-  // ==========================================
-  // 14. Criar Question + Options
-  // ==========================================
-
-  const question = await prismaDB.question.create({
-    data: {
-      statement: normalizedStatement,
-      explanation: normalizedExplanation,
-      difficulty:
-        normalizedDifficulty as
-          | "BEGINNER"
-          | "MEDIUM"
-          | "HARD",
-      type:
-        normalizedType as
-          | "TRUE_FALSE"
-          | "MULTIPLE_CHOICE"
-          | "MULTIPLE_ANSWER",
-      bank:
-        normalizedBank as
-          | "CEBRASPE"
-          | "FCC"
-          | "CENSAGRARIO"
-          | "OTHER",
-      subjectId: normalizedSubjectId,
-
-      options: {
-        create: normalizedOptions,
-      },
-    },
-
-    include: {
-      options: true,
-    },
-  });
-
-  return question;
 }
